@@ -33,13 +33,14 @@ export default function App({ Component, pageProps }) {
 
   //   return getFilesRecursively(directory);
   // }
+  const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDMzNjgwREU5MDNBRUIxMjc2NEZGRDJhOWNDRUFDNTNFYjdkMzVkQkIiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2OTQ1MzA5NTA3NzQsIm5hbWUiOiJidWlsZGVyIn0.4B_Mvq1WvDruzbxzU37gHS4cfKG6DVsp4dDkdo495eA'; // Replace with your API key
+  const client = new Web3Storage({ token: apiKey });
 
-  const handleUpload = async () => {
+  const handleUploads = async () => {
     setUploading(true);
 
     // Create a new Web3Storage client with your API key
-    const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDMzNjgwREU5MDNBRUIxMjc2NEZGRDJhOWNDRUFDNTNFYjdkMzVkQkIiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2OTQ1MzA5NTA3NzQsIm5hbWUiOiJidWlsZGVyIn0.4B_Mvq1WvDruzbxzU37gHS4cfKG6DVsp4dDkdo495eA'; // Replace with your API key
-    const client = new Web3Storage({ token: apiKey });
+
 
     // Replace this with the actual path to your Next.js build folder
     const buildPath = './out'; // Adjust this as needed
@@ -63,7 +64,113 @@ export default function App({ Component, pageProps }) {
     }
   };
 
+  async function getFilesFromDirectory(inputElement) {
+    const filesList = [];
+    const items = inputElement.files;
+
+
+    for (let i = 0; i < items.length; i++) {
+      const file = items[i];
+      filesList.push(file);
+    }
+
+
+    return filesList;
+  }
+
+
+  const uploadNextBuild = async (folder) => {
+    console.log("folder ==> ", folder)
+    // Assuming you have an input with webkitdirectory for users to select the build folder
+    const inputElement = document.getElementById('inp');
+    const allFiles = await getFilesFromDirectory(folder);
+
+
+    if (allFiles.length === 0) return;
+
+
+    try {
+      console.log('Uploading Next.js build ...');
+
+
+      // This assumes client.put() accepts an array of File objects for folders.
+      // Depending on the library/client you are using, this could vary.
+      const cid = await client.put(allFiles);
+
+
+      console.log('Next.js build uploaded');
+
+
+      const url = `https://${cid}.ipfs.w3s.link/`;
+      // Do what you need with the URL
+    } catch (error) {
+      console.error(error);
+    }
+  }
+  // /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+  const [selectedFolder, setSelectedFolder] = useState(null);
+
+  const handleFolderChange = (event) => {
+    const folder = event.target.files[0];
+    setSelectedFolder(folder);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFolder) {
+      alert('Please select a folder to upload.');
+      return;
+    }
+
+    // const folder = await axios.post("/api/upload/upload", )
+    // console.log("My Folder Response ===> ",folder )
+    // You can handle the folder upload logic here
+    // For example, you can use the selectedFolder variable to access the folder's data.
+    console.log("my folder ==> ", selectedFolder)
+    alert('Folder selected for upload.');
+  };
+
+
+  const [buildOutput, setBuildOutput] = useState('');
+
+  const runBuildCommand = async () => {
+    try {
+      const response = await fetch('/api/build/build');
+      const data = await response.json();
+      if (data.success) {
+        setBuildOutput(data.stdout);
+      } else {
+        setBuildOutput(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      setBuildOutput(`Error: ${error.message}`);
+    }
+  };
+
   return <>
-    <button onClick={handleUpload}>Button</button>
+    <a href="/api/download/download">Download .next folder</a>
+    {/* <button onClick={runBuildCommand}>Run npm run build</button> */}
+    <pre>{buildOutput}</pre>
+    <div>
+      <input
+        type="file"
+        webkitdirectory="true"
+        mozdirectory="true"
+        directory="true"
+        onChange={handleFolderChange}
+        multiple="true"
+      // style={{ display: 'none' }}
+      />
+      <label htmlFor="folderInput" style={{ cursor: 'pointer' }}>
+        Select a folder
+      </label>
+      <button onClick={handleUpload}>Upload Folder</button>
+    </div>
+
+    {/* <input type='file' webkitdirectory id='inp' onChange={(e) => uploadNextBuild(e.target.value)} /> */}
+    {/* <button onClick={uploadNextBuild}>check </button> */}
+    <button onClick={handleUploads}>Button</button>
     <Component {...pageProps} /></>
 }
